@@ -19,22 +19,23 @@ func main() {
     }
 
     var listItems []string
-    messages := make(chan int, 3)
+    messages := make(chan int)
 
     scanner := bufio.NewScanner(os.Stdin)
     for scanner.Scan() {
         var url = scanner.Text()
         listItems = append(listItems, url)
-        go func() { messages <- RoutineCounterHttp(url, "Go") }() //RoutineCounterHttp(url, "Go")
+        go func() {
+            messages <- RoutineCounterHttp(url, "Go")
+        }()
 
     }
     if err := scanner.Err(); err != nil {
         fmt.Fprintln(os.Stderr, "reading standard input:", err)
     }
-    var msg int
+
     for i := 0; i < len(listItems); i++ {
-        msg <- messages
-        fmt.Printls(msg)
+        fmt.Println(<- messages)
     }
 }
 
