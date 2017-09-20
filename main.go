@@ -10,6 +10,12 @@ import (
     "strings"
 )
 
+const (
+    K=5
+)
+
+type fn func(path string, substring string) int
+
 func main() {
     typePtr := flag.String("type", "", "Input type for parse ( must be url|file )")
     flag.Parse();
@@ -19,35 +25,71 @@ func main() {
     }
 
     var listItems []string
-    messages := make(chan int)
-
     scanner := bufio.NewScanner(os.Stdin)
     for scanner.Scan() {
         var url = scanner.Text()
         listItems = append(listItems, url)
-        go func() {
-            messages <- RoutineCounterHttp(url, "Go")
-        }()
-
     }
     if err := scanner.Err(); err != nil {
         fmt.Fprintln(os.Stderr, "reading standard input:", err)
     }
 
-    for i := 0; i < len(listItems); i++ {
-        fmt.Println(<- messages)
+    var callback fn
+    switch *typePtr {
+        case "url":
+            callback = CounterHttp
+        case "file":
+            callback = CounterFile
     }
+
+    ProceedQueue(listItems, callback)
 }
 
 
+func ProceedQueue(listItems []string, f fn) {
+    counts := make(chan int)
+    listLength := GetWorkersCount(len(listItems))
+    // var wg sync.WaitGroup
+
+    for j := 0; j < listLength; j++ {
+        // wg.Add(1)
+        go func(j int) {
+            currentUrl := listItems[j]
+            currentCount := f(currentUrl, "Go")
+            fmt.Printf("Count for %s: %d \n", currentUrl, currentCount)
+            counts <- currentCount
+            // wg.Done()
+        }(j)
+    }
 
 
-func RoutineCounterHttp(path string, substring string) int {
+
+
+    totalCounter := 0
+    for i := 0; i < len(listItems); i++ {
+        totalCounter = totalCounter + (<- counts)
+    }
+    fmt.Println("Total: ", totalCounter)
+    // wg.Wait()
+}
+
+
+func GetWorkersCount(length int) int {
+    var workersCount int
+    if length < K {
+        workersCount = length
+    } else {
+        workersCount = K
+    }
+    return workersCount
+}
+
+func CounterHttp(path string, substring string) int {
     result := MakeHttpRequest(path)
     return CountSubstrings(result, substring)
 }
 
-func RoutineCounterFile(path string, substring string) int {
+func CounterFile(path string, substring string) int {
     result := ReadFileAsString(path)
     return CountSubstrings(result, substring)
 }
