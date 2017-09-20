@@ -1,1 +1,2 @@
-# Test solution by Komgorov Alexander
+# Solution
+by Komogorov Alexander
