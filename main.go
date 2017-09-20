@@ -9,11 +9,10 @@ import (
     "io/ioutil"
     "strings"
     "sync"
-    "time"
 )
 
 const (
-    K=2
+    K=5
 )
 
 type fn func(path string, substring string) int
