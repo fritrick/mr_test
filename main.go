@@ -8,10 +8,12 @@ import (
     "net/http"
     "io/ioutil"
     "strings"
+    "sync"
+    "time"
 )
 
 const (
-    K=5
+    K=2
 )
 
 type fn func(path string, substring string) int
@@ -47,30 +49,30 @@ func main() {
 
 
 func ProceedQueue(listItems []string, f fn) {
-    counts := make(chan int)
-    listLength := GetWorkersCount(len(listItems))
-    // var wg sync.WaitGroup
-
-    for j := 0; j < listLength; j++ {
-        // wg.Add(1)
-        go func(j int) {
-            currentUrl := listItems[j]
-            currentCount := f(currentUrl, "Go")
-            fmt.Printf("Count for %s: %d \n", currentUrl, currentCount)
-            counts <- currentCount
-            // wg.Done()
-        }(j)
-    }
-
-
-
-
+    items := make(chan string)
     totalCounter := 0
-    for i := 0; i < len(listItems); i++ {
-        totalCounter = totalCounter + (<- counts)
+
+    workersCount := GetWorkersCount(len(listItems))
+    var wg sync.WaitGroup
+
+    for j := 0; j < workersCount; j++ {
+        wg.Add(1)
+        go func() {
+            for v := range items{
+                currentCount := f(v, "Go")
+                totalCounter = totalCounter + currentCount
+                fmt.Printf("Count for %s: %d \n", v, currentCount)
+            }
+            wg.Done()
+        }()
     }
+
+    for i := 0; i < len(listItems); i++ {
+		items <- listItems[i]
+	}
+	close(items)
+    wg.Wait()
     fmt.Println("Total: ", totalCounter)
-    // wg.Wait()
 }
 
 
